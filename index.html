@@ -551,6 +551,8 @@ function renderSettings(){
     };
   } else if(!user){
     box.innerHTML=`<p class="note">Connecte-toi pour retrouver ta bibliothèque partout.</p>
+      <div class="row"><button class="btn" id="aGoogle">Continuer avec Google</button></div>
+      <p class="note">ou avec une adresse e-mail :</p>
       <input type="email" id="aMail" placeholder="E-mail" autocomplete="email">
       <input type="password" id="aPass" placeholder="Mot de passe (6+ caractères)" autocomplete="current-password">
       <div class="row"><button class="btn sm" id="aIn">Connexion</button><button class="btn ghost sm" id="aUp">Créer un compte</button>
@@ -562,9 +564,17 @@ function renderSettings(){
       }catch(e){ toast(e.code==='auth/invalid-credential'?'Identifiants incorrects':(e.message||'Erreur'),true) }
     };
     $('#aIn').onclick=()=>go('in'); $('#aUp').onclick=()=>go('up');
+    $('#aGoogle').onclick=async()=>{
+      const p=new firebase.auth.GoogleAuthProvider();
+      try{ await fb.auth.signInWithPopup(p); toast('Connecté'); }
+      catch(e){
+        if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'){ fb.auth.signInWithRedirect(p); }
+        else if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request'){ toast(e.code==='auth/unauthorized-domain'?'Domaine non autorisé dans Firebase':(e.message||'Erreur Google'),true); }
+      }
+    };
     const r=$('#fbReset'); if(r) r.onclick=()=>{localStorage.removeItem(LSF);location.reload()};
   } else {
-    box.innerHTML=`<p class="note">Connecté : <b style="color:var(--lime)">${esc(user.email)}</b></p>
+    box.innerHTML=`<p class="note">Connecté : <b style="color:var(--lime)">${esc(user.displayName||user.email)}</b>${user.displayName?` · ${esc(user.email)}`:''}</p>
       <div class="row"><button class="btn ghost sm" id="aOut">Déconnexion</button></div>`;
     $('#aOut').onclick=()=>fb.auth.signOut();
   }
