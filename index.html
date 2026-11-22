@@ -289,6 +289,8 @@ const STATUS = {
   wishlist:{label:'À jouer'}, playing:{label:'En cours'}, done:{label:'Terminé'},
   platinum:{label:'100 %'}, dropped:{label:'Abandonné'}
 };
+const myPl = g => Array.isArray(g.myPlatforms) ? g.myPlatforms : (g.platform ? [g.platform] : []);
+const addPl = (g,p) => { const a=myPl(g); if(!a.includes(p)) a.push(p); g.myPlatforms=a; g.platform=a[0]||''; };
 const PLATFORMS = ['PC','PS5','PS4','Xbox Series','Xbox One','Switch','Mobile','Autre'];
 let state = { games:{} };
 try{ state = JSON.parse(localStorage.getItem(LS)) || state }catch{}
@@ -392,6 +394,7 @@ function cardHTML(g,opts={}){
     </div>
     <div class="meta"><div class="t">${esc(g.name)}</div>
       <div class="s"><span>${esc((g.released||'').slice(0,4)||'—')}</span><span>${g.hours?fmtH(g.hours):esc((g.genres||[])[0]||'')}</span></div>
+      ${myPl(g).length?`<div class="s" style="margin-top:3px;color:var(--lime-dim)"><span>${esc(myPl(g).join(' · '))}</span></div>`:''}
     </div></div>`;
 }
 function renderLibrary(){
@@ -430,7 +433,7 @@ function openGame(id,fromData){
     <div><label class="l">Statut</label><div class="seg" id="mSt">
       ${Object.entries(STATUS).map(([k,v])=>`<button data-k="${k}" class="${g.status===k?'on':''}">${v.label}</button>`).join('')}</div></div>
     <div><label class="l">Plateforme</label><div class="seg" id="mPl">
-      ${PLATFORMS.map(p=>`<button data-k="${p}" class="${g.platform===p?'on':''}">${p}</button>`).join('')}</div></div>
+      ${PLATFORMS.map(p=>`<button data-k="${p}" class="${myPl(g).includes(p)?'on':''}">${p}</button>`).join('')}</div><p class="note" style="margin-top:6px">Tu peux en sélectionner plusieurs.</p></div>
     <div><label class="l">Ma note</label><div class="row">
       <input type="range" id="mRate" min="0" max="10" step="0.5" value="${g.rating||0}"><span class="big" id="mRateV">${g.rating||'—'}</span></div></div>
     <div class="hours"><label class="l">Temps de jeu</label><div class="row">
@@ -447,7 +450,12 @@ function openGame(id,fromData){
   const touch=()=>{g.updatedAt=Date.now();save()};
   if(own){
     $$('#mSt button').forEach(b=>b.onclick=()=>{g.status=b.dataset.k;touch();$$('#mSt button').forEach(x=>x.classList.toggle('on',x===b));renderLibrary()});
-    $$('#mPl button').forEach(b=>b.onclick=()=>{g.platform=g.platform===b.dataset.k?'':b.dataset.k;touch();$$('#mPl button').forEach(x=>x.classList.toggle('on',x.dataset.k===g.platform))});
+    $$('#mPl button').forEach(b=>b.onclick=()=>{
+      const k=b.dataset.k, a=myPl(g);
+      g.myPlatforms = a.includes(k) ? a.filter(x=>x!==k) : [...a,k];
+      g.platform = g.myPlatforms[0]||'';
+      touch(); $$('#mPl button').forEach(x=>x.classList.toggle('on',g.myPlatforms.includes(x.dataset.k)));
+    });
     $('#mRate').oninput=e=>{g.rating=+e.target.value;$('#mRateV').textContent=g.rating||'—';touch()};
     $('#mHours').onchange=e=>{g.hours=Math.max(0,+e.target.value||0);touch()};
     $$('[data-add]').forEach(b=>b.onclick=()=>{g.hours=(g.hours||0)+ +b.dataset.add;$('#mHours').value=g.hours;touch()});
@@ -459,7 +467,7 @@ function openGame(id,fromData){
   }
 }
 function addGame(g,status='wishlist'){
-  state.games[g.id]={...g,status,rating:0,hours:0,platform:'',notes:'',added:Date.now(),updatedAt:Date.now()};
+  state.games[g.id]={...g,status,rating:0,hours:0,platform:'',myPlatforms:[],notes:'',added:Date.now(),updatedAt:Date.now()};
   save(); renderLibrary(); toast('« '+g.name+' » ajouté');
 }
 function closeAll(){$$('.overlay').forEach(o=>o.classList.remove('on'))}
@@ -650,13 +658,13 @@ async function steamSync(){
       if(g){
         g.appid=sg.appid; g.source=g.source||'steam';
         if(hours>(g.hours||0)){ g.hours=hours; updated++; }
-        if(!g.platform) g.platform='PC';
+        addPl(g,'PC');
       } else {
         const id=1e9+sg.appid;
         state.games[id]={id,name:sg.name,appid:sg.appid,source:'steam',
           image:`https://cdn.cloudflare.steamstatic.com/steam/apps/${sg.appid}/library_600x900.jpg`,
           released:'',genres:[],platforms:['PC'],metacritic:null,
-          status:hours>0?'playing':'wishlist',rating:0,hours,platform:'PC',notes:'',added:Date.now(),updatedAt:Date.now()};
+          status:hours>0?'playing':'wishlist',rating:0,hours,platform:'PC',myPlatforms:['PC'],notes:'',added:Date.now(),updatedAt:Date.now()};
         added++;
       }
     });
@@ -698,7 +706,7 @@ async function epicImport(text){
       if(!r){ miss.push(names[i]); continue; }
       const g=slim(r);
       if(state.games[g.id]||have.has(normName(g.name))){ known++; continue; }
-      state.games[g.id]={...g,status:'wishlist',rating:0,hours:0,platform:'PC',source:'epic',notes:'',added:Date.now(),updatedAt:Date.now()};
+      state.games[g.id]={...g,status:'wishlist',rating:0,hours:0,platform:'PC',myPlatforms:['PC'],source:'epic',notes:'',added:Date.now(),updatedAt:Date.now()};
       have.add(normName(g.name)); added++;
     }catch(e){ if(e.message==='no key') break; miss.push(names[i]); }
   }
