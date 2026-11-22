@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050605">
+<title>GameTime</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 3 58 18v28L32 61 6 46V18z' fill='%23050605' stroke='%23b4ff39' stroke-width='4'/%3E%3Cpath d='M36 14 20 35h11l-3 15 16-22H33z' fill='%23b4ff39'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050605; --panel:#0d100c; --panel2:#141912; --line:#1f2a1a;
+  --lime:#b4ff39; --mint:#4dffb4; --lime-dim:#6f9c1f;
+  --text:#e8f1df; --muted:#7f8c75; --danger:#ff5a5a; --gold:#ffd84d;
+  --cut:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:'Chakra Petch',system-ui,sans-serif;min-height:100%}
+body{
+  background:
+    radial-gradient(900px 420px at 85% -10%,rgba(180,255,57,.10),transparent 60%),
+    radial-gradient(700px 400px at -10% 110%,rgba(77,255,180,.06),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+  padding-bottom:84px;
+}
+/* trame hexagonale discrète */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98'%3E%3Cpath d='M28 2 54 17v30L28 62 2 47V17z' fill='none' stroke='%231a2415' stroke-width='1'/%3E%3C/svg%3E");
+  mask-image:linear-gradient(180deg,#000,transparent 55%);
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 55%);
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px;position:relative}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:rgba(5,6,5,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:14px;height:62px}
+.logo{display:flex;align-items:center;gap:10px;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:26px;letter-spacing:.04em;text-transform:uppercase}
+.logo svg{width:34px;height:34px;filter:drop-shadow(0 0 8px rgba(180,255,57,.55))}
+.logo b{color:var(--lime)}
+.spacer{flex:1}
+nav.top{display:none;gap:4px}
+nav.top button,nav.bottom button{
+  font-family:'Rajdhani',sans-serif;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  padding:9px 16px;transition:.15s;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)
+}
+nav.top button:hover{color:var(--text)}
+nav button.on{background:var(--lime);color:#071000}
+.btn{
+  font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--lime);color:#071000;padding:10px 20px;
+  clip-path:polygon(var(--cut) 0,100% 0,calc(100% - var(--cut)) 100%,0 100%);transition:.15s
+}
+.btn:hover{filter:brightness(1.1);box-shadow:0 0 20px rgba(180,255,57,.4)}
+.btn.ghost{background:var(--panel2);color:var(--text)}
+.btn.ghost:hover{background:#1c2418;box-shadow:none}
+.btn.danger{background:#2a1010;color:var(--danger)}
+.btn.sm{padding:7px 14px;font-size:13px}
+
+nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:space-around;
+  background:rgba(8,10,7,.95);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
+nav.bottom button{flex:1;padding:10px 4px;font-size:13px;text-align:center}
+@media(min-width:760px){nav.top{display:flex}nav.bottom{display:none}body{padding-bottom:40px}}
+
+/* sections */
+main{padding:22px 0}
+.view{display:none}.view.on{display:block;animation:in .25s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h2{font-family:'Rajdhani',sans-serif;font-size:22px;letter-spacing:.08em;text-transform:uppercase;margin:6px 0 14px;display:flex;align-items:center;gap:10px}
+h2::before{content:"";width:6px;height:22px;background:var(--lime);transform:skewX(-18deg);box-shadow:0 0 12px rgba(180,255,57,.6)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:7px 14px;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:.15s}
+.chip:hover{color:var(--text)}
+.chip.on{background:var(--lime);color:#071000;border-color:var(--lime);font-weight:600}
+.chip small{opacity:.7;margin-left:5px}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+select,input[type=text],input[type=password],input[type=email],input[type=number],textarea{
+  background:var(--panel);border:1px solid var(--line);padding:10px 12px;outline:none;width:100%;transition:.15s}
+select{width:auto}
+input:focus,select:focus,textarea:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(180,255,57,.12)}
+textarea{resize:vertical;min-height:80px}
+
+/* grille de cartes */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+@media(min-width:760px){.grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}}
+.card{position:relative;background:var(--panel);cursor:pointer;transition:.2s;
+  clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px));
+  border-bottom:2px solid transparent}
+.card:hover{transform:translateY(-4px);background:var(--panel2)}
+.card .cover{aspect-ratio:3/4;background:linear-gradient(135deg,#121a0e,#0a0d08);position:relative;overflow:hidden}
+.card .cover img{width:100%;height:100%;object-fit:cover;display:block;transition:.3s}
+.card:hover .cover img{transform:scale(1.06)}
+.card .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(5,6,5,.92))}
+.noimg{display:grid;place-items:center;height:100%;color:var(--lime-dim);font-family:'Rajdhani';font-size:40px;font-weight:700}
+.badge{position:absolute;top:8px;left:8px;z-index:2;font-family:'Rajdhani';font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;background:#000c;border:1px solid currentColor;backdrop-filter:blur(4px)}
+.score{position:absolute;top:8px;right:22px;z-index:2;font-family:'Rajdhani';font-weight:700;font-size:15px;color:var(--lime);background:#000b;padding:2px 8px}
+.card .meta{padding:10px 12px 12px}
+.card .t{font-weight:600;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:35px}
+.card .s{color:var(--muted);font-size:12px;margin-top:5px;display:flex;justify-content:space-between}
+.st-wishlist{color:#8fb7ff}.st-playing{color:var(--lime)}.st-done{color:var(--mint)}.st-platinum{color:var(--gold)}.st-dropped{color:var(--danger)}
+.card.st-playing{border-bottom-color:var(--lime)}
+.card.st-done{border-bottom-color:var(--mint)}
+.card.st-platinum{border-bottom-color:var(--gold)}
+.addbtn{position:absolute;right:8px;bottom:8px;z-index:3}
+.empty{text-align:center;color:var(--muted);padding:60px 20px;border:1px dashed var(--line)}
+.empty p{margin-bottom:16px}
+
+/* modal */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;overflow-y:auto}
+.overlay.on{display:flex}
+@media(min-width:760px){.overlay{align-items:center;padding:30px}}
+.modal{background:var(--panel);width:100%;max-width:620px;max-height:92vh;overflow-y:auto;border:1px solid var(--line);position:relative;
+  clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,0 100%);animation:in .2s ease}
+.modal.wide{max-width:760px}
+.mhead{display:flex;gap:16px;padding:20px;border-bottom:1px solid var(--line)}
+.mhead img,.mhead .noimg{width:96px;height:128px;object-fit:cover;flex:none;background:#0a0d08}
+.mhead h3{font-family:'Rajdhani';font-size:24px;line-height:1.1;text-transform:uppercase;letter-spacing:.03em}
+.mhead p{color:var(--muted);font-size:13px;margin-top:6px}
+.close{position:absolute;top:10px;right:30px;font-size:26px;color:var(--muted);z-index:5;line-height:1}
+.close:hover{color:var(--lime)}
+.mbody{padding:20px;display:grid;gap:18px}
+label.l{display:block;font-family:'Rajdhani';font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:var(--lime);margin-bottom:8px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{padding:8px 12px;font-size:13px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.seg button.on{background:var(--lime);color:#071000;border-color:var(--lime);font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;background:var(--panel2);border:0;padding:0;flex:1;min-width:150px;box-shadow:none!important}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:var(--lime);transform:rotate(45deg);box-shadow:0 0 10px var(--lime);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;background:var(--lime);border:0;border-radius:0;cursor:pointer}
+.big{font-family:'Rajdhani';font-size:28px;font-weight:700;color:var(--lime);min-width:64px;text-align:right}
+.hours input{width:110px}
+
+/* résultats de recherche */
+.results{display:grid;gap:8px;padding:0 20px 20px}
+.res{display:flex;gap:12px;align-items:center;background:var(--panel2);padding:8px;cursor:pointer;transition:.15s;border-left:3px solid transparent}
+.res:hover{border-left-color:var(--lime);background:#1a2115}
+.res img,.res .noimg{width:48px;height:64px;object-fit:cover;flex:none;font-size:18px}
+.res .i{flex:1;min-width:0}
+.res .i b{display:block;font-size:14px}
+.res .i small{color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;padding:0 20px 20px}
+
+/* stats */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
+@media(min-width:760px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--panel);padding:16px;border-left:3px solid var(--lime);clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%)}
+.tile .n{font-family:'Rajdhani';font-size:38px;font-weight:700;color:var(--lime);line-height:1}
+.tile .k{color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-top:6px}
+.panel{background:var(--panel);padding:18px;margin-bottom:16px;border:1px solid var(--line)}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:110px 1fr 54px;gap:10px;align-items:center;font-size:13px}
+.bar-row .track{height:10px;background:var(--panel2);transform:skewX(-20deg);overflow:hidden}
+.bar-row .fill{height:100%;background:linear-gradient(90deg,var(--lime-dim),var(--lime));box-shadow:0 0 10px rgba(180,255,57,.5)}
+.bar-row span:last-child{text-align:right;color:var(--muted)}
+.two{display:grid;gap:16px}
+@media(min-width:760px){.two{grid-template-columns:1fr 1fr}}
+.rank{display:grid;gap:8px;counter-reset:r}
+.rank div{display:flex;gap:10px;align-items:center;font-size:14px;padding:6px 0;border-bottom:1px solid var(--line)}
+.rank div::before{counter-increment:r;content:counter(r);font-family:'Rajdhani';font-weight:700;color:var(--lime);width:22px}
+.rank em{margin-left:auto;font-style:normal;color:var(--muted)}
+
+.setting{display:grid;gap:10px}
+.note{color:var(--muted);font-size:13px;line-height:1.5}
+.note a{color:var(--lime)}
+code{background:var(--panel2);padding:1px 6px;font-size:12px;color:var(--mint)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--lime);color:#071000;font-weight:600;padding:10px 20px;z-index:99;opacity:0;pointer-events:none;transition:.25s;
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.err{background:var(--danger);color:#fff}
+.loader{text-align:center;padding:40px;color:var(--lime);font-family:'Rajdhani';letter-spacing:.2em;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.sync i{width:8px;height:8px;background:var(--muted);transform:rotate(45deg)}
+.sync.ok i{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="logo">
+      <svg viewBox="0 0 64 64"><path d="M32 3 58 18v28L32 61 6 46V18z" fill="#050605" stroke="#b4ff39" stroke-width="4" stroke-linejoin="round"/><path d="M36 14 20 35h11l-3 15 16-22H33z" fill="#b4ff39"/></svg>
+      <span>Game<b>Time</b></span>
+    </div>
+    <nav class="top" id="navTop"></nav>
+    <div class="spacer"></div>
+    <div class="sync" id="syncState"><i></i><span>Local</span></div>
+    <button class="btn" id="btnAdd">+ Ajouter</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="view on" id="v-library">
+    <h2>Ma bibliothèque</h2>
+    <div class="chips" id="statusChips"></div>
+    <div class="toolbar">
+      <input type="text" id="libSearch" placeholder="Filtrer mes jeux…" style="flex:1;min-width:160px">
+      <select id="libSort">
+        <option value="updated">Récents</option>
+        <option value="name">A → Z</option>
+        <option value="rating">Ma note</option>
+        <option value="hours">Heures jouées</option>
+      </select>
+    </div>
+    <div class="grid" id="libGrid"></div>
+  </section>
+
+  <section class="view" id="v-discover">
+    <h2>Découvrir</h2>
+    <div class="chips" id="discChips"></div>
+    <div class="grid" id="discGrid"></div>
+  </section>
+
+  <section class="view" id="v-stats">
+    <h2>Statistiques</h2>
+    <div id="statsBody"></div>
+  </section>
+
+  <section class="view" id="v-settings">
+    <h2>Réglages</h2>
+    <div class="panel setting">
+      <label class="l">Clé API RAWG</label>
+      <p class="note">Sert à chercher les jeux et leurs jaquettes. Clé gratuite sur <a href="https://rawg.io/apidocs" target="_blank" rel="noopener">rawg.io/apidocs</a>.</p>
+      <div class="row"><input type="text" id="rawgKey" placeholder="Colle ta clé ici" style="flex:1"><button class="btn sm" id="saveKey">Enregistrer</button></div>
+    </div>
+    <div class="panel setting">
+      <label class="l">Compte &amp; synchro (Firebase)</label>
+      <div id="authBox"></div>
+    </div>
+    <div class="panel setting">
+      <label class="l">Données</label>
+      <div class="row">
+        <button class="btn ghost sm" id="btnExport">Exporter (JSON)</button>
+        <button class="btn ghost sm" id="btnImport">Importer</button>
+        <input type="file" id="fileImport" accept="application/json" hidden>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="bottom" id="navBottom"></nav>
+
+<div class="overlay" id="ovSearch"><div class="modal wide">
+  <button class="close" data-close>×</button>
+  <div style="padding:20px 20px 12px"><label class="l">Ajouter un jeu</label>
+    <input type="text" id="qInput" placeholder="Rechercher un jeu…" autocomplete="off"></div>
+  <div id="qResults"><p class="hint">Tape au moins 2 lettres.</p></div>
+</div></div>
+
+<div class="overlay" id="ovGame"><div class="modal" id="gameModal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
+<script>
+/* ============ CONFIG ============ */
+// Mets ici ta clé RAWG et ta config Firebase pour que tes amis n'aient rien à saisir.
+const DEFAULT_RAWG_KEY = "";
+const FIREBASE_CONFIG = null; // ex: {apiKey:"...",authDomain:"...",projectId:"...",appId:"..."}
+
+/* ============ OUTILS ============ */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = 'gametime_v1', LSK = 'gametime_rawg', LSF = 'gametime_fb';
+const STATUS = {
+  wishlist:{label:'À jouer'}, playing:{label:'En cours'}, done:{label:'Terminé'},
+  platinum:{label:'100 %'}, dropped:{label:'Abandonné'}
+};
+const PLATFORMS = ['PC','PS5','PS4','Xbox Series','Xbox One','Switch','Mobile','Autre'];
+let state = { games:{} };
+try{ state = JSON.parse(localStorage.getItem(LS)) || state }catch{}
+if(!state.games) state.games = {};
+
+let toastT;
+function toast(msg,err){
+  const t=$('#toast'); t.textContent=msg; t.className='toast on'+(err?' err':'');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2600);
+}
+const getKey = ()=> localStorage.getItem(LSK) || DEFAULT_RAWG_KEY;
+const fmtH = h => (Math.round(h*10)/10).toString().replace('.',',') + ' h';
+
+/* ============ NAV ============ */
+const VIEWS=[['library','Biblio'],['discover','Découvrir'],['stats','Stats'],['settings','Réglages']];
+function buildNav(){
+  const html = VIEWS.map(([id,l])=>`<button data-v="${id}">${l}</button>`).join('');
+  $('#navTop').innerHTML = html; $('#navBottom').innerHTML = html;
+  $$('nav button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+}
+function show(id){
+  $$('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+id));
+  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===id));
+  if(id==='library')renderLibrary();
+  if(id==='discover')loadDiscover();
+  if(id==='stats')renderStats();
+  if(id==='settings')renderSettings();
+  scrollTo({top:0});
+}
+
+/* ============ PERSISTANCE / SYNCHRO ============ */
+let fb=null, user=null, unsub=null, pushT, applyingRemote=false;
+function save(){
+  state.updated = Date.now();
+  localStorage.setItem(LS, JSON.stringify(state));
+  if(user && !applyingRemote){ clearTimeout(pushT); pushT=setTimeout(push,800); }
+}
+async function push(){
+  if(!user) return;
+  try{ await fb.db.collection('gametime').doc(user.uid).set(state); setSync(true,'Synchronisé'); }
+  catch(e){ setSync(false,'Erreur synchro'); console.error(e); }
+}
+function setSync(ok,txt){
+  const s=$('#syncState'); s.className='sync'+(ok?' ok':''); $('span',s).textContent=txt;
+}
+function initFirebase(){
+  let cfg = FIREBASE_CONFIG;
+  if(!cfg){ try{ cfg = JSON.parse(localStorage.getItem(LSF)||'null') }catch{} }
+  if(!cfg || !window.firebase) return false;
+  if(!firebase.apps.length) firebase.initializeApp(cfg);
+  fb = { auth:firebase.auth(), db:firebase.firestore() };
+  fb.auth.onAuthStateChanged(u=>{
+    user=u; if(unsub){unsub();unsub=null}
+    if(u){
+      setSync(false,'Connexion…');
+      let first=true;
+      unsub = fb.db.collection('gametime').doc(u.uid).onSnapshot(snap=>{
+        if(snap.exists){
+          const remote=snap.data();
+          if(first && (remote.updated||0) < (state.updated||0)){ push(); }
+          else if((remote.updated||0) > (state.updated||0)){
+            applyingRemote=true; state=remote; if(!state.games)state.games={}; save(); applyingRemote=false; refresh();
+          }
+          setSync(true,'Synchronisé');
+        } else push();
+        first=false;
+      },e=>{console.error(e);setSync(false,'Erreur synchro')});
+    } else setSync(false,'Local');
+    renderSettings();
+  });
+  return true;
+}
+window.addEventListener('load',()=>{ setTimeout(()=>{ initFirebase(); },300); });
+
+/* ============ API RAWG ============ */
+async function rawg(path,params={}){
+  const key=getKey();
+  if(!key){ toast('Ajoute ta clé RAWG dans les réglages',true); show('settings'); throw new Error('no key'); }
+  const u=new URL('https://api.rawg.io/api/'+path); u.searchParams.set('key',key);
+  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
+  const r=await fetch(u); if(!r.ok) throw new Error('RAWG '+r.status); return r.json();
+}
+const slim = g => ({
+  id:g.id, name:g.name, image:g.background_image||'', released:g.released||'',
+  genres:(g.genres||[]).map(x=>x.name), platforms:(g.platforms||[]).map(p=>p.platform.name).slice(0,6),
+  metacritic:g.metacritic||null
+});
+
+/* ============ BIBLIOTHÈQUE ============ */
+let fStatus='all';
+function cardHTML(g,opts={}){
+  const st=g.status;
+  return `<div class="card ${st?'st-'+st:''}" data-id="${g.id}" ${opts.disc?'data-disc="1"':''}>
+    <div class="cover">
+      ${g.image?`<img loading="lazy" src="${esc(g.image)}" alt="">`:`<div class="noimg">${esc(g.name[0]||'?')}</div>`}
+      ${st?`<span class="badge st-${st}">${STATUS[st].label}</span>`:''}
+      ${g.rating?`<span class="score">${g.rating}</span>`:''}
+    </div>
+    <div class="meta"><div class="t">${esc(g.name)}</div>
+      <div class="s"><span>${esc((g.released||'').slice(0,4)||'—')}</span><span>${g.hours?fmtH(g.hours):esc((g.genres||[])[0]||'')}</span></div>
+    </div></div>`;
+}
+function renderLibrary(){
+  const all=Object.values(state.games);
+  const counts={all:all.length}; Object.keys(STATUS).forEach(k=>counts[k]=all.filter(g=>g.status===k).length);
+  $('#statusChips').innerHTML=[['all','Tous'],...Object.entries(STATUS).map(([k,v])=>[k,v.label])]
+    .map(([k,l])=>`<button class="chip ${fStatus===k?'on':''}" data-s="${k}">${l}<small>${counts[k]}</small></button>`).join('');
+  $$('#statusChips .chip').forEach(c=>c.onclick=()=>{fStatus=c.dataset.s;renderLibrary()});
+  const q=$('#libSearch').value.trim().toLowerCase(), sort=$('#libSort').value;
+  let list=all.filter(g=>(fStatus==='all'||g.status===fStatus)&&(!q||g.name.toLowerCase().includes(q)));
+  const sorters={updated:(a,b)=>(b.updatedAt||0)-(a.updatedAt||0),name:(a,b)=>a.name.localeCompare(b.name),
+    rating:(a,b)=>(b.rating||0)-(a.rating||0),hours:(a,b)=>(b.hours||0)-(a.hours||0)};
+  list.sort(sorters[sort]);
+  $('#libGrid').innerHTML = list.length ? list.map(g=>cardHTML(g)).join('') :
+    `<div class="empty" style="grid-column:1/-1"><p>${all.length?'Aucun jeu dans cette catégorie.':'Ta bibliothèque est vide. Lance ta première partie !'}</p>${all.length?'':'<button class="btn" onclick="openSearch()">+ Ajouter un jeu</button>'}</div>`;
+  $$('#libGrid .card').forEach(c=>c.onclick=()=>openGame(+c.dataset.id));
+}
+$('#libSearch').oninput=renderLibrary; $('#libSort').onchange=renderLibrary;
+
+/* ============ MODALE JEU ============ */
+function openGame(id,fromData){
+  const g = state.games[id] || fromData;
+  if(!g) return;
+  const own=!!state.games[id];
+  const m=$('#gameModal');
+  m.innerHTML=`<button class="close" data-close>×</button>
+  <div class="mhead">
+    ${g.image?`<img src="${esc(g.image)}" alt="">`:`<div class="noimg">${esc(g.name[0])}</div>`}
+    <div><h3>${esc(g.name)}</h3>
+      <p>${esc(g.released||'Date inconnue')}${g.metacritic?` · Metacritic ${g.metacritic}`:''}</p>
+      <p>${esc((g.genres||[]).join(' · '))}</p>
+      <p>${esc((g.platforms||[]).join(', '))}</p></div>
+  </div>
+  <div class="mbody">
+    ${own?`
+    <div><label class="l">Statut</label><div class="seg" id="mSt">
+      ${Object.entries(STATUS).map(([k,v])=>`<button data-k="${k}" class="${g.status===k?'on':''}">${v.label}</button>`).join('')}</div></div>
+    <div><label class="l">Plateforme</label><div class="seg" id="mPl">
+      ${PLATFORMS.map(p=>`<button data-k="${p}" class="${g.platform===p?'on':''}">${p}</button>`).join('')}</div></div>
+    <div><label class="l">Ma note</label><div class="row">
+      <input type="range" id="mRate" min="0" max="10" step="0.5" value="${g.rating||0}"><span class="big" id="mRateV">${g.rating||'—'}</span></div></div>
+    <div class="hours"><label class="l">Temps de jeu</label><div class="row">
+      <input type="number" id="mHours" min="0" step="0.5" value="${g.hours||0}">
+      <button class="btn ghost sm" data-add="1">+1 h</button><button class="btn ghost sm" data-add="5">+5 h</button><button class="btn ghost sm" data-add="10">+10 h</button></div></div>
+    <div><label class="l">Notes</label><textarea id="mNotes" placeholder="Mes impressions, où j'en suis…">${esc(g.notes||'')}</textarea></div>
+    <div class="row"><button class="btn danger sm" id="mDel">Retirer de ma bibliothèque</button></div>
+    `:`
+    <div><label class="l">Ajouter avec le statut</label><div class="seg" id="mAddSt">
+      ${Object.entries(STATUS).map(([k,v])=>`<button data-k="${k}">${v.label}</button>`).join('')}</div></div>`}
+  </div>`;
+  $('#ovGame').classList.add('on');
+  const touch=()=>{g.updatedAt=Date.now();save()};
+  if(own){
+    $$('#mSt button').forEach(b=>b.onclick=()=>{g.status=b.dataset.k;touch();$$('#mSt button').forEach(x=>x.classList.toggle('on',x===b));renderLibrary()});
+    $$('#mPl button').forEach(b=>b.onclick=()=>{g.platform=g.platform===b.dataset.k?'':b.dataset.k;touch();$$('#mPl button').forEach(x=>x.classList.toggle('on',x.dataset.k===g.platform))});
+    $('#mRate').oninput=e=>{g.rating=+e.target.value;$('#mRateV').textContent=g.rating||'—';touch()};
+    $('#mHours').onchange=e=>{g.hours=Math.max(0,+e.target.value||0);touch()};
+    $$('[data-add]').forEach(b=>b.onclick=()=>{g.hours=(g.hours||0)+ +b.dataset.add;$('#mHours').value=g.hours;touch()});
+    $('#mNotes').oninput=e=>{g.notes=e.target.value;touch()};
+    $('#mDel').onclick=()=>{ if(confirm('Retirer « '+g.name+' » ?')){delete state.games[id];save();closeAll();renderLibrary();toast('Jeu retiré')} };
+  } else {
+    $$('#mAddSt button').forEach(b=>b.onclick=()=>{addGame(fromData,b.dataset.k);openGame(id)});
+  }
+}
+function addGame(g,status='wishlist'){
+  state.games[g.id]={...g,status,rating:0,hours:0,platform:'',notes:'',added:Date.now(),updatedAt:Date.now()};
+  save(); renderLibrary(); toast('« '+g.name+' » ajouté');
+}
+function closeAll(){$$('.overlay').forEach(o=>o.classList.remove('on'))}
+document.addEventListener('click',e=>{
+  if(e.target.matches('[data-close]')||e.target.classList.contains('overlay')){
+    closeAll(); if($('#v-library').classList.contains('on'))renderLibrary();
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
+
+/* ============ RECHERCHE ============ */
+function openSearch(){ $('#ovSearch').classList.add('on'); setTimeout(()=>$('#qInput').focus(),50); }
+window.openSearch=openSearch;
+$('#btnAdd').onclick=openSearch;
+let qT, found={};
+$('#qInput').oninput=e=>{
+  clearTimeout(qT); const q=e.target.value.trim();
+  if(q.length<2){$('#qResults').innerHTML='<p class="hint">Tape au moins 2 lettres.</p>';return}
+  $('#qResults').innerHTML='<div class="loader">RECHERCHE…</div>';
+  qT=setTimeout(async()=>{
+    try{
+      const d=await rawg('games',{search:q,page_size:20,search_precise:true});
+      found={}; d.results.forEach(g=>found[g.id]=slim(g));
+      $('#qResults').innerHTML = d.results.length ? `<div class="results">${d.results.map(g=>{const s=slim(g);return `
+        <div class="res" data-id="${s.id}">
+          ${s.image?`<img loading="lazy" src="${esc(s.image)}" alt="">`:`<div class="noimg">${esc(s.name[0])}</div>`}
+          <div class="i"><b>${esc(s.name)}</b><small>${esc(s.released.slice(0,4)||'—')} · ${esc(s.platforms.slice(0,3).join(', '))}</small></div>
+          ${state.games[s.id]?`<span class="badge st-${state.games[s.id].status}" style="position:static">${STATUS[state.games[s.id].status].label}</span>`:'<span class="btn sm">+</span>'}
+        </div>`}).join('')}</div>` : '<p class="hint">Aucun résultat.</p>';
+      $$('#qResults .res').forEach(r=>r.onclick=()=>{ $('#ovSearch').classList.remove('on'); openGame(+r.dataset.id,found[r.dataset.id]); });
+    }catch(err){ if(err.message!=='no key') $('#qResults').innerHTML='<p class="hint">Erreur de recherche. Vérifie ta clé RAWG.</p>'; }
+  },350);
+};
+
+/* ============ DÉCOUVRIR ============ */
+const DISC={
+  popular:{label:'Populaires',p:()=>({ordering:'-added',dates:`${new Date().getFullYear()-1}-01-01,${new Date().getFullYear()}-12-31`})},
+  upcoming:{label:'À venir',p:()=>{const a=new Date(),b=new Date();b.setFullYear(a.getFullYear()+1);const f=d=>d.toISOString().slice(0,10);return{ordering:'-added',dates:f(a)+','+f(b)}}},
+  top:{label:'Les mieux notés',p:()=>({ordering:'-metacritic',metacritic:'85,100'})},
+  recent:{label:'Sorties récentes',p:()=>{const a=new Date(),b=new Date();b.setDate(a.getDate()-60);const f=d=>d.toISOString().slice(0,10);return{ordering:'-released',dates:f(b)+','+f(a)}}}
+};
+let dTab='popular', dCache={};
+function loadDiscover(){
+  $('#discChips').innerHTML=Object.entries(DISC).map(([k,v])=>`<button class="chip ${dTab===k?'on':''}" data-k="${k}">${v.label}</button>`).join('');
+  $$('#discChips .chip').forEach(c=>c.onclick=()=>{dTab=c.dataset.k;loadDiscover()});
+  const grid=$('#discGrid');
+  const draw=list=>{
+    grid.innerHTML=list.map(g=>cardHTML(state.games[g.id]||g,{disc:1})).join('');
+    $$('#discGrid .card').forEach(c=>c.onclick=()=>{const id=+c.dataset.id;openGame(id,list.find(x=>x.id===id))});
+  };
+  if(dCache[dTab]) return draw(dCache[dTab]);
+  if(!getKey()){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><p>Ajoute ta clé RAWG pour découvrir des jeux.</p><button class="btn" onclick="show(\'settings\')">Réglages</button></div>'; return; }
+  grid.innerHTML='<div class="loader" style="grid-column:1/-1">CHARGEMENT…</div>';
+  const tab=dTab;
+  rawg('games',{...DISC[tab].p(),page_size:24}).then(d=>{
+    dCache[tab]=d.results.map(slim); if(tab===dTab)draw(dCache[tab]);
+  }).catch(()=>{grid.innerHTML='<div class="empty" style="grid-column:1/-1"><p>Impossible de charger. Vérifie ta clé RAWG.</p></div>'});
+}
+
+/* ============ STATS ============ */
+function renderStats(){
+  const all=Object.values(state.games);
+  if(!all.length){ $('#statsBody').innerHTML='<div class="empty"><p>Ajoute des jeux pour voir tes stats.</p></div>'; return; }
+  const hours=all.reduce((s,g)=>s+(g.hours||0),0);
+  const rated=all.filter(g=>g.rating>0);
+  const avg=rated.length?rated.reduce((s,g)=>s+g.rating,0)/rated.length:0;
+  const done=all.filter(g=>g.status==='done'||g.status==='platinum').length;
+  const maxC=Math.max(...Object.keys(STATUS).map(k=>all.filter(g=>g.status===k).length),1);
+  const gen={}; all.forEach(g=>(g.genres||[]).forEach(x=>{gen[x]=gen[x]||{n:0,h:0};gen[x].n++;gen[x].h+=g.hours||0}));
+  const topGen=Object.entries(gen).sort((a,b)=>b[1].h-a[1].h||b[1].n-a[1].n).slice(0,6);
+  const maxG=Math.max(...topGen.map(([,v])=>v.h||v.n),1);
+  const topPlayed=[...all].sort((a,b)=>(b.hours||0)-(a.hours||0)).filter(g=>g.hours).slice(0,5);
+  const topRated=[...rated].sort((a,b)=>b.rating-a.rating).slice(0,5);
+  const days=hours/24;
+  $('#statsBody').innerHTML=`
+  <div class="tiles">
+    <div class="tile"><div class="n">${Math.round(hours)}</div><div class="k">Heures jouées${days>=1?` · ${days.toFixed(1).replace('.',',')} jours`:''}</div></div>
+    <div class="tile"><div class="n">${all.length}</div><div class="k">Jeux suivis</div></div>
+    <div class="tile"><div class="n">${done}</div><div class="k">Terminés</div></div>
+    <div class="tile"><div class="n">${avg?avg.toFixed(1).replace('.',','):'—'}</div><div class="k">Note moyenne</div></div>
+  </div>
+  <div class="two">
+    <div class="panel"><label class="l">Répartition</label><div class="bars">
+      ${Object.entries(STATUS).map(([k,v])=>{const n=all.filter(g=>g.status===k).length;return `<div class="bar-row"><span>${v.label}</span><div class="track"><div class="fill" style="width:${n/maxC*100}%"></div></div><span>${n}</span></div>`}).join('')}
+    </div></div>
+    <div class="panel"><label class="l">Genres favoris</label><div class="bars">
+      ${topGen.map(([k,v])=>`<div class="bar-row"><span>${esc(k)}</span><div class="track"><div class="fill" style="width:${(v.h||v.n)/maxG*100}%"></div></div><span>${v.h?Math.round(v.h)+' h':v.n}</span></div>`).join('')}
+    </div></div>
+    <div class="panel"><label class="l">Les plus joués</label><div class="rank">
+      ${topPlayed.length?topPlayed.map(g=>`<div>${esc(g.name)}<em>${fmtH(g.hours)}</em></div>`).join(''):'<p class="note">Renseigne tes heures de jeu.</p>'}</div></div>
+    <div class="panel"><label class="l">Mes mieux notés</label><div class="rank">
+      ${topRated.length?topRated.map(g=>`<div>${esc(g.name)}<em>${g.rating}/10</em></div>`).join(''):'<p class="note">Note tes jeux pour les voir ici.</p>'}</div></div>
+  </div>`;
+}
+
+/* ============ RÉGLAGES ============ */
+function renderSettings(){
+  $('#rawgKey').value = localStorage.getItem(LSK) || '';
+  const box=$('#authBox');
+  if(!fb && !FIREBASE_CONFIG){
+    box.innerHTML=`<p class="note">Pour synchroniser entre appareils, colle la config Firebase de ton projet (Firestore + Auth e-mail/mot de passe activés). Tes données restent locales en attendant.</p>
+      <textarea id="fbCfg" placeholder='{"apiKey":"…","authDomain":"…","projectId":"…","appId":"…"}'></textarea>
+      <div class="row"><button class="btn sm" id="fbSave">Enregistrer</button></div>`;
+    $('#fbSave').onclick=()=>{
+      try{ const c=JSON.parse($('#fbCfg').value); if(!c.apiKey||!c.projectId) throw 0;
+        localStorage.setItem(LSF,JSON.stringify(c)); toast('Config enregistrée'); initFirebase(); renderSettings();
+      }catch{ toast('JSON invalide',true) }
+    };
+  } else if(!user){
+    box.innerHTML=`<p class="note">Connecte-toi pour retrouver ta bibliothèque partout.</p>
+      <input type="email" id="aMail" placeholder="E-mail" autocomplete="email">
+      <input type="password" id="aPass" placeholder="Mot de passe (6+ caractères)" autocomplete="current-password">
+      <div class="row"><button class="btn sm" id="aIn">Connexion</button><button class="btn ghost sm" id="aUp">Créer un compte</button>
+      ${localStorage.getItem(LSF)?'<button class="btn ghost sm" id="fbReset">Changer la config</button>':''}</div>`;
+    const go=async mode=>{
+      try{ const m=$('#aMail').value.trim(),p=$('#aPass').value;
+        if(mode==='in') await fb.auth.signInWithEmailAndPassword(m,p); else await fb.auth.createUserWithEmailAndPassword(m,p);
+        toast('Connecté');
+      }catch(e){ toast(e.code==='auth/invalid-credential'?'Identifiants incorrects':(e.message||'Erreur'),true) }
+    };
+    $('#aIn').onclick=()=>go('in'); $('#aUp').onclick=()=>go('up');
+    const r=$('#fbReset'); if(r) r.onclick=()=>{localStorage.removeItem(LSF);location.reload()};
+  } else {
+    box.innerHTML=`<p class="note">Connecté : <b style="color:var(--lime)">${esc(user.email)}</b></p>
+      <div class="row"><button class="btn ghost sm" id="aOut">Déconnexion</button></div>`;
+    $('#aOut').onclick=()=>fb.auth.signOut();
+  }
+}
+$('#saveKey').onclick=()=>{ localStorage.setItem(LSK,$('#rawgKey').value.trim()); dCache={}; toast('Clé enregistrée') };
+$('#btnExport').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}));
+  a.download='gametime-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+};
+$('#btnImport').onclick=()=>$('#fileImport').click();
+$('#fileImport').onchange=async e=>{
+  try{ const d=JSON.parse(await e.target.files[0].text());
+    if(!d.games) throw 0; state.games={...state.games,...d.games}; save(); renderLibrary(); toast('Import réussi');
+  }catch{ toast('Fichier invalide',true) }
+};
+
+function refresh(){ const on=$('.view.on').id.slice(2); show(on); }
+buildNav(); show('library');
+</script>
+</body>
+</html>
