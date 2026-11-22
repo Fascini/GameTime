@@ -225,11 +225,6 @@ code{background:var(--panel2);padding:1px 6px;font-size:12px;color:var(--mint)}
   <section class="view" id="v-settings">
     <h2>Réglages</h2>
     <div class="panel setting">
-      <label class="l">Clé API RAWG</label>
-      <p class="note">Sert à chercher les jeux et leurs jaquettes. Clé gratuite sur <a href="https://rawg.io/apidocs" target="_blank" rel="noopener">rawg.io/apidocs</a>.</p>
-      <div class="row"><input type="text" id="rawgKey" placeholder="Colle ta clé ici" style="flex:1"><button class="btn sm" id="saveKey">Enregistrer</button></div>
-    </div>
-    <div class="panel setting">
       <label class="l">Compte &amp; synchro (Firebase)</label>
       <div id="authBox"></div>
     </div>
@@ -261,7 +256,7 @@ code{background:var(--panel2);padding:1px 6px;font-size:12px;color:var(--mint)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
 <script>
 /* ============ CONFIG ============ */
-// Mets ici ta clé RAWG et ta config Firebase pour que tes amis n'aient rien à saisir.
+// Clé RAWG unique, partagée par tous les utilisateurs (rien à saisir côté amis).
 const DEFAULT_RAWG_KEY = "2490b75bf5044aac887040b5e641807b";
 const FIREBASE_CONFIG = null; // ex: {apiKey:"...",authDomain:"...",projectId:"...",appId:"..."}
 
@@ -269,7 +264,7 @@ const FIREBASE_CONFIG = null; // ex: {apiKey:"...",authDomain:"...",projectId:".
 const $ = (s,r=document)=>r.querySelector(s);
 const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const LS = 'gametime_v1', LSK = 'gametime_rawg', LSF = 'gametime_fb';
+const LS = 'gametime_v1', LSF = 'gametime_fb';
 const STATUS = {
   wishlist:{label:'À jouer'}, playing:{label:'En cours'}, done:{label:'Terminé'},
   platinum:{label:'100 %'}, dropped:{label:'Abandonné'}
@@ -284,7 +279,7 @@ function toast(msg,err){
   const t=$('#toast'); t.textContent=msg; t.className='toast on'+(err?' err':'');
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),2600);
 }
-const getKey = ()=> localStorage.getItem(LSK) || DEFAULT_RAWG_KEY;
+const getKey = ()=> DEFAULT_RAWG_KEY;
 const fmtH = h => (Math.round(h*10)/10).toString().replace('.',',') + ' h';
 
 /* ============ NAV ============ */
@@ -351,7 +346,7 @@ window.addEventListener('load',()=>{ setTimeout(()=>{ initFirebase(); },300); })
 /* ============ API RAWG ============ */
 async function rawg(path,params={}){
   const key=getKey();
-  if(!key){ toast('Ajoute ta clé RAWG dans les réglages',true); show('settings'); throw new Error('no key'); }
+  if(!key){ toast('Clé API manquante',true); throw new Error('no key'); }
   const u=new URL('https://api.rawg.io/api/'+path); u.searchParams.set('key',key);
   Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
   const r=await fetch(u); if(!r.ok) throw new Error('RAWG '+r.status); return r.json();
@@ -491,7 +486,7 @@ function loadDiscover(){
     $$('#discGrid .card').forEach(c=>c.onclick=()=>{const id=+c.dataset.id;openGame(id,list.find(x=>x.id===id))});
   };
   if(dCache[dTab]) return draw(dCache[dTab]);
-  if(!getKey()){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><p>Ajoute ta clé RAWG pour découvrir des jeux.</p><button class="btn" onclick="show(\'settings\')">Réglages</button></div>'; return; }
+  if(!getKey()){ grid.innerHTML='<div class="empty" style="grid-column:1/-1"><p>Clé API manquante.</p></div>'; return; }
   grid.innerHTML='<div class="loader" style="grid-column:1/-1">CHARGEMENT…</div>';
   const tab=dTab;
   rawg('games',{...DISC[tab].p(),page_size:24}).then(d=>{
@@ -537,7 +532,6 @@ function renderStats(){
 
 /* ============ RÉGLAGES ============ */
 function renderSettings(){
-  $('#rawgKey').value = localStorage.getItem(LSK) || '';
   const box=$('#authBox');
   if(!fb && !FIREBASE_CONFIG){
     box.innerHTML=`<p class="note">Pour synchroniser entre appareils, colle la config Firebase de ton projet (Firestore + Auth e-mail/mot de passe activés). Tes données restent locales en attendant.</p>
@@ -568,7 +562,6 @@ function renderSettings(){
     $('#aOut').onclick=()=>fb.auth.signOut();
   }
 }
-$('#saveKey').onclick=()=>{ localStorage.setItem(LSK,$('#rawgKey').value.trim()); dCache={}; toast('Clé enregistrée') };
 $('#btnExport').onclick=()=>{
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}));
