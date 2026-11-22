@@ -34,23 +34,24 @@ export default {
         case '/resolve': {
           const vanity = q.get('vanity') || '';
           if (!/^[A-Za-z0-9_-]{2,32}$/.test(vanity)) return json({ error: 'Pseudo invalide' }, 400);
-          const { data } = await call('/ISteamUser/ResolveVanityURL/v1/', { vanity });
-          if (!data || data.response.success !== 1) return json({ error: 'Profil introuvable' }, 404);
+          const { data, status } = await call('/ISteamUser/ResolveVanityURL/v0001/', { vanityurl: vanity });
+          if (!data) return json({ error: 'Steam ne répond pas (HTTP ' + status + ')' }, 502); if (data.response.success !== 1) return json({ error: 'Profil introuvable' }, 404);
           return json({ steamid: data.response.steamid });
         }
         case '/summary': {
           if (needId()) return json({ error: 'SteamID invalide' }, 400);
-          const { data } = await call('/ISteamUser/GetPlayerSummaries/v2/', { steamids: steamid });
+          const { data } = await call('/ISteamUser/GetPlayerSummaries/v0002/', { steamids: steamid });
           const p = data && data.response.players[0];
           if (!p) return json({ error: 'Profil introuvable' }, 404);
           return json({ personaname: p.personaname, avatarfull: p.avatarfull, visible: p.communityvisibilitystate === 3 });
         }
         case '/owned': {
           if (needId()) return json({ error: 'SteamID invalide' }, 400);
-          const { data } = await call('/IPlayerService/GetOwnedGames/v1/', {
+          const { data, status } = await call('/IPlayerService/GetOwnedGames/v0001/', {
             steamid, include_appinfo: '1', include_played_free_games: '1'
           });
-          const r = data && data.response;
+          if (!data) return json({ error: 'Steam ne répond pas (HTTP ' + status + ')' }, 502);
+          const r = data.response;
           if (!r || !r.games) return json({ games: [], private: true });
           return json({
             games: r.games.map(g => ({ appid: g.appid, name: g.name, minutes: g.playtime_forever || 0 }))
@@ -60,7 +61,7 @@ export default {
           if (needId()) return json({ error: 'SteamID invalide' }, 400);
           const appid = q.get('appid') || '';
           if (!/^\d{1,9}$/.test(appid)) return json({ error: 'appid invalide' }, 400);
-          const { data } = await call('/ISteamUserStats/GetPlayerAchievements/v1/', { steamid, appid, l: 'french' });
+          const { data } = await call('/ISteamUserStats/GetPlayerAchievements/v0001/', { steamid, appid, l: 'french' });
           const ps = data && data.playerstats;
           if (!ps || ps.success === false || !ps.achievements) {
             return json({ error: (ps && ps.error) || 'Aucun succès disponible pour ce jeu' });
