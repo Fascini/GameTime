@@ -178,6 +178,12 @@ code{background:var(--panel2);padding:1px 6px;font-size:12px;color:var(--mint)}
 .sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .sync i{width:8px;height:8px;background:var(--muted);transform:rotate(45deg)}
 .sync.ok i{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+.plat{display:grid;gap:14px}
+.plat-head{display:flex;align-items:center;gap:14px}
+.avatar{width:52px;height:52px;object-fit:cover;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:var(--panel2)}
+.soon{display:flex;gap:8px;flex-wrap:wrap}
+.soon span{padding:7px 14px;font-size:13px;color:var(--muted);border:1px dashed var(--line)}
+.pill{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -222,6 +228,11 @@ code{background:var(--panel2);padding:1px 6px;font-size:12px;color:var(--mint)}
     <div id="statsBody"></div>
   </section>
 
+  <section class="view" id="v-platforms">
+    <h2>Plateformes</h2>
+    <div class="plat" id="platBody"></div>
+  </section>
+
   <section class="view" id="v-settings">
     <h2>Réglages</h2>
     <div class="panel setting">
@@ -258,6 +269,8 @@ code{background:var(--panel2);padding:1px 6px;font-size:12px;color:var(--mint)}
 /* ============ CONFIG ============ */
 // Clé RAWG unique, partagée par tous les utilisateurs (rien à saisir côté amis).
 const DEFAULT_RAWG_KEY = "2490b75bf5044aac887040b5e641807b";
+// URL du relais Cloudflare Worker pour Steam (voir cloudflare/steam-worker.js)
+const STEAM_PROXY = "";
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCiMWVqwIpJE_Bcx2e9jLL0QRFDJ0_T1xU",
   authDomain: "gametime-8471e.firebaseapp.com",
@@ -280,6 +293,7 @@ const PLATFORMS = ['PC','PS5','PS4','Xbox Series','Xbox One','Switch','Mobile','
 let state = { games:{} };
 try{ state = JSON.parse(localStorage.getItem(LS)) || state }catch{}
 if(!state.games) state.games = {};
+if(!state.platforms) state.platforms = {};
 
 let toastT;
 function toast(msg,err){
@@ -290,7 +304,7 @@ const getKey = ()=> DEFAULT_RAWG_KEY;
 const fmtH = h => (Math.round(h*10)/10).toString().replace('.',',') + ' h';
 
 /* ============ NAV ============ */
-const VIEWS=[['library','Biblio'],['discover','Découvrir'],['stats','Stats'],['settings','Réglages']];
+const VIEWS=[['library','Biblio'],['discover','Découvrir'],['stats','Stats'],['platforms','Comptes'],['settings','Réglages']];
 function buildNav(){
   const html = VIEWS.map(([id,l])=>`<button data-v="${id}">${l}</button>`).join('');
   $('#navTop').innerHTML = html; $('#navBottom').innerHTML = html;
@@ -302,6 +316,7 @@ function show(id){
   if(id==='library')renderLibrary();
   if(id==='discover')loadDiscover();
   if(id==='stats')renderStats();
+  if(id==='platforms')renderPlatforms();
   if(id==='settings')renderSettings();
   scrollTo({top:0});
 }
@@ -337,7 +352,7 @@ function initFirebase(){
           const remote=snap.data();
           if(first && (remote.updated||0) < (state.updated||0)){ push(); }
           else if((remote.updated||0) > (state.updated||0)){
-            applyingRemote=true; state=remote; if(!state.games)state.games={}; save(); applyingRemote=false; refresh();
+            applyingRemote=true; state=remote; if(!state.games)state.games={}; if(!state.platforms)state.platforms={}; save(); applyingRemote=false; refresh();
           }
           setSync(true,'Synchronisé');
         } else push();
@@ -366,11 +381,12 @@ const slim = g => ({
 
 /* ============ BIBLIOTHÈQUE ============ */
 let fStatus='all';
+const steamFb = g => g.appid ? `onerror="this.onerror=null;this.src='https://cdn.cloudflare.steamstatic.com/steam/apps/${+g.appid}/header.jpg'"` : '';
 function cardHTML(g,opts={}){
   const st=g.status;
   return `<div class="card ${st?'st-'+st:''}" data-id="${g.id}" ${opts.disc?'data-disc="1"':''}>
     <div class="cover">
-      ${g.image?`<img loading="lazy" src="${esc(g.image)}" alt="">`:`<div class="noimg">${esc(g.name[0]||'?')}</div>`}
+      ${g.image?`<img loading="lazy" src="${esc(g.image)}" ${steamFb(g)} alt="">`:`<div class="noimg">${esc(g.name[0]||'?')}</div>`}
       ${st?`<span class="badge st-${st}">${STATUS[st].label}</span>`:''}
       ${g.rating?`<span class="score">${g.rating}</span>`:''}
     </div>
@@ -403,11 +419,11 @@ function openGame(id,fromData){
   const m=$('#gameModal');
   m.innerHTML=`<button class="close" data-close>×</button>
   <div class="mhead">
-    ${g.image?`<img src="${esc(g.image)}" alt="">`:`<div class="noimg">${esc(g.name[0])}</div>`}
+    ${g.image?`<img src="${esc(g.image)}" ${steamFb(g)} alt="">`:`<div class="noimg">${esc(g.name[0])}</div>`}
     <div><h3>${esc(g.name)}</h3>
       <p>${esc(g.released||'Date inconnue')}${g.metacritic?` · Metacritic ${g.metacritic}`:''}</p>
       <p>${esc((g.genres||[]).join(' · '))}</p>
-      <p>${esc((g.platforms||[]).join(', '))}</p></div>
+      <p>${esc((g.platforms||[]).join(', '))}${g.source==='steam'?' · Steam':''}${g.source==='epic'?' · Epic Games':''}</p></div>
   </div>
   <div class="mbody">
     ${own?`
@@ -420,6 +436,7 @@ function openGame(id,fromData){
     <div class="hours"><label class="l">Temps de jeu</label><div class="row">
       <input type="number" id="mHours" min="0" step="0.5" value="${g.hours||0}">
       <button class="btn ghost sm" data-add="1">+1 h</button><button class="btn ghost sm" data-add="5">+5 h</button><button class="btn ghost sm" data-add="10">+10 h</button></div></div>
+    ${g.appid?`<div><label class="l">Succès Steam</label><div id="mAch"></div></div>`:''}
     <div><label class="l">Notes</label><textarea id="mNotes" placeholder="Mes impressions, où j'en suis…">${esc(g.notes||'')}</textarea></div>
     <div class="row"><button class="btn danger sm" id="mDel">Retirer de ma bibliothèque</button></div>
     `:`
@@ -435,6 +452,7 @@ function openGame(id,fromData){
     $('#mHours').onchange=e=>{g.hours=Math.max(0,+e.target.value||0);touch()};
     $$('[data-add]').forEach(b=>b.onclick=()=>{g.hours=(g.hours||0)+ +b.dataset.add;$('#mHours').value=g.hours;touch()});
     $('#mNotes').oninput=e=>{g.notes=e.target.value;touch()};
+    if(g.appid) renderAch(g);
     $('#mDel').onclick=()=>{ if(confirm('Retirer « '+g.name+' » ?')){delete state.games[id];save();closeAll();renderLibrary();toast('Jeu retiré')} };
   } else {
     $$('#mAddSt button').forEach(b=>b.onclick=()=>{addGame(fromData,b.dataset.k);openGame(id)});
@@ -590,6 +608,132 @@ $('#fileImport').onchange=async e=>{
     if(!d.games) throw 0; state.games={...state.games,...d.games}; save(); renderLibrary(); toast('Import réussi');
   }catch{ toast('Fichier invalide',true) }
 };
+
+/* ============ PLATEFORMES ============ */
+const normName = n => String(n).toLowerCase().replace(/[^a-z0-9]/g,'');
+async function steamApi(path,params){
+  if(!STEAM_PROXY) throw new Error('Relais Steam non configuré');
+  const u=new URL(STEAM_PROXY.replace(/\/$/,'')+path);
+  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
+  let r; try{ r=await fetch(u) }catch{ throw new Error('Relais Steam injoignable') }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||('Steam '+r.status));
+  return d;
+}
+async function steamResolve(input){
+  let v=input.trim(); if(!v) throw new Error('Entre ton profil Steam');
+  const m=v.match(/steamcommunity\.com\/(profiles|id)\/([^\/?#]+)/);
+  if(m){ if(m[1]==='profiles') return m[2]; v=m[2]; }
+  if(/^\d{17}$/.test(v)) return v;
+  return (await steamApi('/resolve',{vanity:v})).steamid;
+}
+async function steamConnect(input){
+  const id=await steamResolve(input);
+  const p=await steamApi('/summary',{steamid:id});
+  state.platforms.steam={id,name:p.personaname,avatar:p.avatarfull,last:0};
+  save(); renderPlatforms();
+  if(!p.visible) toast('Profil privé : passe-le en public pour importer',true);
+  else await steamSync();
+}
+async function steamSync(){
+  const s=state.platforms.steam; if(!s) return;
+  const btn=$('#steamSync'); if(btn){btn.disabled=true;btn.textContent='Import…'}
+  try{
+    const d=await steamApi('/owned',{steamid:s.id});
+    if(d.private||!d.games.length){ toast('Aucun jeu visible : mets les « détails du jeu » en public sur Steam',true); return; }
+    const byName={}; Object.values(state.games).forEach(g=>{ byName[normName(g.name)]=g });
+    let added=0, updated=0;
+    d.games.forEach(sg=>{
+      const hours=Math.round(sg.minutes/6)/10;
+      const key=normName(sg.name);
+      let g=state.games[1e9+sg.appid]||byName[key];
+      if(g){
+        g.appid=sg.appid; g.source=g.source||'steam';
+        if(hours>(g.hours||0)){ g.hours=hours; updated++; }
+        if(!g.platform) g.platform='PC';
+      } else {
+        const id=1e9+sg.appid;
+        state.games[id]={id,name:sg.name,appid:sg.appid,source:'steam',
+          image:`https://cdn.cloudflare.steamstatic.com/steam/apps/${sg.appid}/library_600x900.jpg`,
+          released:'',genres:[],platforms:['PC'],metacritic:null,
+          status:hours>0?'playing':'wishlist',rating:0,hours,platform:'PC',notes:'',added:Date.now(),updatedAt:Date.now()};
+        added++;
+      }
+    });
+    s.last=Date.now(); save(); renderPlatforms(); renderLibrary();
+    toast(`Steam : ${added} ajoutés, ${updated} mis à jour`);
+  }catch(e){ toast(e.message||'Erreur Steam',true) }
+  finally{ const b=$('#steamSync'); if(b){b.disabled=false;b.textContent='Synchroniser'} }
+}
+function renderAch(g){
+  const box=$('#mAch'); if(!box) return;
+  const a=g.ach;
+  box.innerHTML=(a?`<div class="row"><span class="big" style="text-align:left">${a.done}/${a.total}</span>
+    <div class="bar-row" style="flex:1;min-width:140px;grid-template-columns:1fr"><div class="track"><div class="fill" style="width:${a.total?a.done/a.total*100:0}%"></div></div></div></div>
+    ${(a.recent||[]).map(x=>`<p class="note">· ${esc(x)}</p>`).join('')}`:'<p class="note">Pas encore chargés.</p>')+
+    `<div class="row" style="margin-top:8px"><button class="btn ghost sm" id="mAchBtn">${a?'Actualiser':'Charger les succès'}</button></div>`;
+  $('#mAchBtn').onclick=async()=>{
+    const s=state.platforms.steam; if(!s){ toast('Connecte Steam dans l\'onglet Comptes',true); return; }
+    $('#mAchBtn').textContent='Chargement…';
+    try{
+      const d=await steamApi('/achievements',{steamid:s.id,appid:g.appid});
+      if(d.error){ toast(d.error,true); renderAch(g); return; }
+      const list=d.achievements, got=list.filter(x=>x.achieved===1);
+      g.ach={done:got.length,total:list.length,recent:got.sort((x,y)=>y.time-x.time).slice(0,5).map(x=>x.name),at:Date.now()};
+      g.updatedAt=Date.now(); save(); renderAch(g);
+    }catch(e){ toast(e.message,true); renderAch(g); }
+  };
+}
+async function epicImport(text){
+  const names=[...new Set(text.split('\n').map(x=>x.trim()).filter(Boolean))].slice(0,80);
+  if(!names.length){ toast('Colle au moins un titre',true); return; }
+  const btn=$('#epicGo'); btn.disabled=true;
+  let added=0, known=0; const miss=[];
+  const have=new Set(Object.values(state.games).map(g=>normName(g.name)));
+  for(let i=0;i<names.length;i++){
+    btn.textContent=`Import ${i+1}/${names.length}…`;
+    try{
+      const d=await rawg('games',{search:names[i],page_size:1,search_precise:true});
+      const r=d.results[0];
+      if(!r){ miss.push(names[i]); continue; }
+      const g=slim(r);
+      if(state.games[g.id]||have.has(normName(g.name))){ known++; continue; }
+      state.games[g.id]={...g,status:'wishlist',rating:0,hours:0,platform:'PC',source:'epic',notes:'',added:Date.now(),updatedAt:Date.now()};
+      have.add(normName(g.name)); added++;
+    }catch(e){ if(e.message==='no key') break; miss.push(names[i]); }
+  }
+  save(); renderLibrary(); renderPlatforms();
+  toast(`Epic : ${added} ajoutés${known?`, ${known} déjà là`:''}${miss.length?`, ${miss.length} introuvables`:''}`, !added&&miss.length>0);
+  if(miss.length) console.info('Introuvables :',miss);
+}
+function renderPlatforms(){
+  const s=state.platforms.steam;
+  const last=s&&s.last?new Date(s.last).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'jamais';
+  $('#platBody').innerHTML=`
+  <div class="panel setting">
+    <label class="l">Steam</label>
+    ${s?`<div class="plat-head">${s.avatar?`<img class="avatar" src="${esc(s.avatar)}" alt="">`:''}
+        <div><b>${esc(s.name)}</b><div class="pill">Dernière synchro : ${last}</div></div></div>
+      <p class="note">Importe tes jeux et tes heures. Les succès se chargent jeu par jeu depuis sa fiche.</p>
+      <div class="row"><button class="btn sm" id="steamSync">Synchroniser</button><button class="btn danger sm" id="steamOff">Déconnecter</button></div>`
+    :`<p class="note">Colle le lien de ton profil Steam (ou ton pseudo / SteamID). Ton profil et tes « détails du jeu » doivent être en <b style="color:var(--lime)">public</b> le temps de l'import.</p>
+      ${STEAM_PROXY?'':'<p class="note" style="color:var(--gold)">Le relais Steam n\'est pas encore configuré par l\'administrateur du site.</p>'}
+      <div class="row"><input type="text" id="steamIn" placeholder="steamcommunity.com/id/ton-pseudo" style="flex:1;min-width:200px"><button class="btn sm" id="steamGo">Connecter</button></div>`}
+  </div>
+  <div class="panel setting">
+    <label class="l">Epic Games</label>
+    <p class="note">Epic ne propose pas d'accès à ta bibliothèque ni à tes heures. Colle la liste de tes jeux (un titre par ligne, 80 maximum) et GameTime les retrouve et les ajoute « À jouer ».</p>
+    <textarea id="epicIn" placeholder="Fortnite&#10;Alan Wake 2&#10;Control"></textarea>
+    <div class="row"><button class="btn sm" id="epicGo">Importer la liste</button></div>
+  </div>
+  <div class="panel setting">
+    <label class="l">Bientôt</label>
+    <div class="soon"><span>PlayStation</span><span>Xbox</span><span>Nintendo</span></div>
+  </div>`;
+  if(s){ $('#steamSync').onclick=steamSync; $('#steamOff').onclick=()=>{ if(confirm('Déconnecter Steam ? Tes jeux importés restent dans ta bibliothèque.')){delete state.platforms.steam;save();renderPlatforms()} }; }
+  else { $('#steamGo').onclick=async()=>{ const b=$('#steamGo'); b.disabled=true; b.textContent='…'; try{ await steamConnect($('#steamIn').value) }catch(e){ toast(e.message||'Erreur',true); renderPlatforms() } }; }
+  $('#epicGo').onclick=()=>epicImport($('#epicIn').value);
+}
 
 function refresh(){ const on=$('.view.on').id.slice(2); show(on); }
 buildNav(); show('library');
